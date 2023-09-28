@@ -1,4 +1,4 @@
-###  DBT Setup
+#  DBT Setup
 1. Setup venv and activate venv
 2. Install Requirements
 3. Install extensions :Add to GIT Ignore, YAML, Better Jinja
@@ -33,7 +33,7 @@ enter dataset name
 thread: 60
 select;  US
 
-# NOTE: Always ensure you are inside the folder that has your dbt virtual environment and that your virtual environment is activated
+### NOTE: Always ensure you are inside the folder that has your dbt virtual environment and that your virtual environment is activated
 
 3. Run:
 ```
