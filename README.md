@@ -72,3 +72,54 @@ Above
 4. run "dbt clean && dbt deps"
 5. Restart the vs code or run "command shift p" >> select reload window >> choose the correct python interpreter
 6. check the models folder to see if the models have the dbt icon (it works successfully if it does)
+
+**NOTE ADD thelook_ecommerce (ECOMMERCE)  DATA FROM BIGQUERY PUBLIC DATASET**
+
+**Dbt Project Architecture: Source >> Staging >> Intermediate >> Final Table (Fact or Dimensions Table or View)**
+(Staging : Usually layer of transformation)
+1. Create a staging folder   inside the models folder
+2. Inside the staging folder : add a src_ecommerce.yml file and file it up with all the souce description as below:
+```
+version: 2
+
+sources:
+  - name: thelook_ecommerce
+    database: bigquery-public-data
+    tables:
+      - name: inventory_items
+      - name: order_items
+      - name: orders
+      - name: products
+      - name: users
+
+```
+
+3. Inside the same root that has the dbt_project.yml create a packages.yml and fill it up as below:
+
+```
+packages:
+  - package: dbt-labs/dbt_utils
+    version: 1.0.0
+
+  - package: calogica/dbt_expectations
+    version: [">=0.8.0", "<0.9.0"]
+
+  - package: dbt-labs/codegen
+    version: 0.9.0
+```
+4. Run: ``` dbt deps ```
+5. Before running the next command ensure that the bigquery-public-data.thelook_ecommerce has been pulled into your bigquery project: do this on the bigquery
+
+6. To generate the query for the staging orders table,  Run:
+	```
+	dbt run-operation  --profiles-dir /Users/abidakunabisoye/.dbt generate_base_model --args '{"source_name": "thelook_ecommerce", "table_name": "orders"}'
+
+	```
+	or
+
+	```
+	 dbt run-operation generate_base_model --args '{"source_name": "thelook_ecommerce", "table_name": "orders"}'
+
+	```
+7. Create a stg_ecommerce_orders.sql
+8. After running the above query a query is generated : copy the query generated and paste into the stg_ecommerce_orders.yml
