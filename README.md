@@ -122,4 +122,76 @@ packages:
 
 	```
 7. Create a stg_ecommerce_orders.sql
-8. After running the above query a query is generated : copy the query generated and paste into the stg_ecommerce_orders.yml
+8. After running the above query a query is generated : copy the query generated and paste into the stg_ecommerce_orders.sql
+9. Run:
+``` dbt run ``` or ``` dbt run -s stg_ecommerce_orders ```
+10. Generate the yml file for the stg_ecommerce_orders model: run
+  ``` dbt run-operation  generate_model_yaml  --args '{"model_names": ["stg_ecommerce_orders"]}'
+  ```
+  or
+  ```
+  dbt run-operation  --profiles-dir /Users/path-to-profiles.yaml-file/.dbt generate_model_yaml  --args '{"model_names": ["stg_ecommerce_orders"]}'
+  ```
+11. Crteated a stg_ecommerce_orders.yml file and paste in the result of the previous command
+12. Update the table as shown below
+```
+## Testing, documentation, Referencing and configuration
+version: 2
+
+models:
+  - name: stg_ecommerce_orders
+    description: " Table describing and detailing every order on per row basis "
+    columns:
+      - name: order_id
+        description: "The order Id of the order"
+        tests:
+          - not_null
+          - unique
+
+      - name: user_id
+        description: "User Id who placed the order "
+        tests:
+          - not_null
+
+      - name: created_at
+        description: "When the order was placed"
+        tests:
+          - not_null
+
+      - name: returned_at
+        description: "When the order was returned"
+        tests:
+          - not_null:
+              where: "status = 'Returned'"
+
+      - name: shipped_at
+        description: "When the order was shipped"
+        tests:
+          - not_null:
+              where: " delivered_at IS NOT NULL OR status = 'Shipped'"
+
+      - name: delivered_at
+        description: "When the order was delivered"
+        tests:
+          - not_null:
+              where: " returned_at IS NOT NULL OR status = 'Complete'"
+
+      - name: status
+        description: "Status of the order"
+        tests:
+          - accepted_values:
+               name: expected_order_status
+               values:
+                - Processing
+                - Cancelled
+                - shipped
+                - Complete
+                - Returned
+
+      - name: num_of_item
+        description: "Number of items in the order"
+        tests:
+          - not_null:
+
+```
+13. Run : ``` dbt test -s stg_ecommerce_orders ```

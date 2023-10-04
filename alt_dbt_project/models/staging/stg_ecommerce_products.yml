@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: stg_ecommerce_products
+    description: "Products table on the ecommerce store"
+    columns:
+      - name: product_id
+
+      - name: cost
+        description: "How much the product cost to purchase"
+        tests:
+          - not_null
+
+      - name: retail_price
+        description: "How much the product retails on the ecommerce platform or store"
+        tests:
+          - not_null
+
+      - name: department
+        description: "Identifier for items categories as Menswear or Womenswear"
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - "Men"
+                - "Women"

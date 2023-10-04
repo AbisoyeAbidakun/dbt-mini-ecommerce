@@ -1,0 +1,53 @@
+version: 2
+
+models:
+  - name: orders
+    description: "Table of order level information"
+
+    columns:
+      - name: order_id
+        description: "When the order was created"
+        tests:
+          - relationships:
+              to: ref('stg_ecommerce_orders')
+              field: order_id
+
+      - name: order_created_at
+        description: "When the order was created"
+
+      - name: order_returned_at
+        description: "When the order was returned"
+
+      - name: order_delivered_at
+        description: "When the order was delivered"
+
+      - name: order_shipped_at
+        description: "When the order was shipped"
+
+      - name: order_status
+        description:  " order status"
+
+      - name: num_items_ordered
+        description: "Number of items in the order"
+
+      - name: total_sale_price
+        description: "Sum of item_sale_price for the whole order"
+        tests:
+          - not_null
+
+      - name: total_product_cost
+        description: "Sum of product_cost for the whole order"
+        tests:
+          - not_null
+
+
+      - name: total_profit
+        description: "Sum of (item_sale_price - product_cost) for the whole order"
+        tests:
+          - not_null
+
+
+      - name: total_discount
+        description: "Sum of (product_retail_price - item_sale_price) for the whole order"
+        tests:
+          - not_null
