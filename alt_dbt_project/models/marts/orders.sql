@@ -26,8 +26,14 @@ WITH
 	m.total_product_cost,
 	m.total_sale_price,
 	m.total_discount,
-	m.total_profit
+	m.total_profit,
+
+	-- Time between first order and current order
+	TIMESTAMP_DIFF(o.created_at, user_order_data.first_order_created_at, DAY) AS days_since_first_order
+
   FROM
       {{ ref("stg_ecommerce_orders") }} AS o
   LEFT JOIN order_items_metrics AS  m
   ON o.order_id= m.order_id
+  LEFT JOIN {{ ref("int_initial_order_created") }} AS user_order_data
+      ON o.user_id = user_order_data.user_id

@@ -1,0 +1,25 @@
+## Testing, documentation, Referencing and configuration
+version: 2
+
+seeds:
+  - name: distribution_centre
+    description: " A csv seed file describing the distribution centres for the ecommerce company "
+    columns:
+      - name: id
+        description: "id of the distribution_centre"
+        tests:
+          - not_null
+          - unique
+      - name: name
+        description: "Name of the distribution_centre"
+      - name: latitude
+        description: "Latitudinal coordinates of the distribution_centre"
+      - name: longitude
+        description: "Latitudinal coordinates of the distribution_centre"
+
+    config:
+      column_types:
+        id: INTEGER
+        name: STRING
+        latitude: FLOAT
+        longitude: FLOAT

@@ -40,7 +40,7 @@ models:
               where: " returned_at IS NOT NULL OR status = 'Complete'"
 
       - name: status
-        description: "Status of the order"
+        description: "{{ doc('status') }}"
         tests:
           - accepted_values:
                name: expected_order_status
