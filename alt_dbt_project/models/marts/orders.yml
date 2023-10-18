@@ -1,8 +1,24 @@
 version: 2
 
+groups:
+  - name: sales
+    owner:
+      email: alt_sales_team@alt.com
+      slack: alt_sales_team-slack-channel
+  - name: marketing
+    owner:
+      email: alt_marketing_team@alt.com
+      slack: alt_marketing_team-slack-channel
+
 models:
   - name: orders
     description: "Table of order level information"
+    config:
+      group: marketing
+    access: public
+    # private (to work on)
+    # public
+    # protected
 
     columns:
       - name: order_id
