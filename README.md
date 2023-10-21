@@ -395,3 +395,259 @@ LEFT JOIN {{ ref('int_initial_order_created') }} AS user_data
 ```
 9. run the orders.sql model
 
+### Adding Incremental Models
+``` link : https://docs.getdbt.com/docs/build/incremental-models ```
+1.  create file named stg_ecommerce_events
+2.  Add
+ ```
+ /* Add this in the config after
+        unique_key='event_id',
+		on_schema_change='sync_all_columns',
+		partition_by={
+			"field": "created_at",
+			"data_type": "timestamp",
+			"granularity": "day"
+		}
+*/
+
+{{
+	config(
+		materialized='incremental',
+
+	)
+}}
+
+WITH source AS (
+	SELECT *
+
+	FROM {{ source('thelook_ecommerce', 'events') }}
+	{# first run with " WHERE created_at <= '2023-01-01' then remove where clause "#}
+    WHERE created_at <= '2023-01-01'
+)
+
+SELECT
+	id AS event_id,
+	user_id,
+	sequence_number,
+	session_id,
+	created_at,
+	ip_address,
+	city,
+	state,
+	postal_code,
+	browser,
+	traffic_source,
+	uri AS web_link,
+	event_type,
+
+
+
+FROM source
+
+{# Only runs this filter on an incremental run #}
+{% if is_incremental() %}
+
+{# The {{ this }} macro is essentially a {{ ref('') }} macro that allows for a circular reference #}
+{# Circular reference is when a table references itself #}
+WHERE created_at > (SELECT MAX(created_at) FROM {{ this }})
+
+{% endif %}
+
+ ```
+
+3. Run on the where created_at <= '2023-01-01' run without  the below
+```
+   unique_key='event_id',
+   on_schema_change='sync_all_columns',
+```
+uisng ``` dbt run -s stg_ecommerce_events ```
+4. run without WHERE created_at <= '2023-01-01' by commenting it out
+5. In the events log you'll see "create" for the first and "merge" for the second
+6. Notice and increase in the rows for that table in bigquery
+7. If ran again no data will be available
+8. Add the unique_key and on_schema_change
+```
+   unique_key='event_id',
+   on_schema_change='sync_all_columns',
+```
+explain reason
+9. Run: dbt run -s stg_ecommerce_events --full-refresh
+
+## Table Partitioning
+Partitioning is when a table is cut into partition based on a time_stamp column to make query faster
+Can be done on any type of table not only incremental tables
+Its useful for cutting down the size of the table
+1. Add the below to the stg_ecommerce_events model
+```
+	partition_by={
+			"field": "created_at",
+			"data_type": "timestamp",
+			"granularity": "day"
+		}
+```
+2. Run dbt run -s stg_ecommerce_events --full-refresh
+3. check the target folder and run folder
+
+
+## Model Governance
+links : https://docs.getdbt.com/docs/collaborate/govern/about-model-governance
+Model Access: restrict those who have access to a model
+Model Contract ; model has certain models and columns, and shape
+Model Version: basically versions
+**Model Access: restrict those who have access to a model**
+1. Add the below to the orders.yml file
+
+```
+groups:
+  - name: sales
+    owner:
+      # 'name' or 'email' is required; additional properties allowed
+      email: sales@liners.com
+      slack: sales-channel
+      github: sales-channel-data
+
+models:
+  - name: orders
+    description: "Table of order level information"
+    # Set this model to be a part of the sales group we define above
+    # Groups can be defined in another yml file
+    config:
+      group: sales
+    # 3 settings:
+    # Private - only other models in the same (sales) group can ref() this model
+    # Protected - only other models in the same group or project can ref() this model
+    # Public - any other model can ref() this model
+    access: protected
+
+```
+2. Create the file test_marketing_orders.sql
+3. Add : SELECT * FROM {{ ref("orders") }}
+4. Run : dbt run -s test_marketing_orders
+5. Add groups marketing to orders.yml file
+
+```
+  - name: marketing
+    owner:
+      email: marketing@liners.com
+      slack: marketing-channel
+      github: marketing-channel-data
+```
+6. Add {{ config(groups='marketing')}} to the test_marketing_orders model
+7. change access to private
+8. Run:  dbt run -s test_marketing_orders and Watch error thrown
+9. Remove the marketing groups referencing from the test_marketing_orders model to stop error from being thrown.or delete model
+
+Assignments: Implement severity, dbt_expectations.expect_column_values_to_be_between and dbt_utils.expression_is_true on the orders model
+
+**MODEL contract**
+1. Overhaul the stg_ecommerce_order_items models with
+Note:
+- Model contract (run BEFORE model is built)
+- Model tests (run AFTER model is built)
+- not_null checks are removed from test has it basically duplicates the contract
+
+```
+version: 2
+
+models:
+  - name: stg_ecommerce_order_items
+    description: "Line items from orders"
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: order_item_id
+        tests:
+          - not_null:
+              severity: error
+          - unique:
+              severity: error
+        data_type: INTEGER
+        constraints:
+          - type: not_null
+
+      - name: order_id
+        data_type: INTEGER
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_ecommerce__orders')
+              field: order_id
+
+      - name: user_id
+        data_type: INTEGER
+        tests:
+          - not_null
+
+      - name: product_id
+        data_type: INTEGER
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_ecommerce__products')
+              field: product_id
+
+      - name: item_sale_price
+        data_type: FLOAT64
+        description: "How much the item sold for"
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+```
+2. Run dbt run -s stg_ecommerce_order_items
+3. Comment out the product_id in the above model then run dbt run -s stg_ecommerce_order_items
+4. Cast user_id as string in the above model then run bt run -s stg_ecommerce_order_items
+watch to see the various contract failure or errors thrown
+
+**MODEL VERSIONS**
+1. Create a new folder called product_versions inside it copy and paste the stg_ecommerce_products model and rename it stg_ecommerce_products_v1 remove the brand column
+2. In the stg_ecommerce_products.yml file add the following
+```
+      - name: brand
+        description: "Brand of the product"
+```
+AND
+3. Add the brand column to the version 2 (rename current version : stg_ecommerce_products_v2)
+```
+
+    latest_version: 2
+    versions:
+        # Matches what's above -- nothing more needed
+        - v: 1
+          columns:
+          # This means: use the 'columns' list from above, but exclude "brand" as we added it in v2
+          - include: all
+            exclude: [brand]
+
+        # We added a new brand column
+        - v: 2
+          # Makes this table stay as stg_ecommerce__products in our database!
+          config:
+            alias: stg_ecommerce_products
+          columns:
+          # This means: use the 'columns' list from above
+          - include: all
+
+```
+NOTE: State this
+    - If you don't specify the latest, version, dbt will either look
+    - for the unversioned file name (e.g. stg_ecommerce__products.sql), or reference the
+    - latest version. In this case, it'd reference version 2 automatically, but this shows you
+    - how you could do a pre-release version (e.g. create version 2, but by default dbt points at version 1)
+    -  using latest_version: 1
+4. Run dbt clean && dbt deps
+5. Run dbt run -s stg_ecommerce_products
+6. change the latest version to 1 in there stg_ecommerce__products and run the below
+7. Run everything up to the int_order_items_products model : dbt run -s +int_order_items_products
+8. change the latest version to 2
+9. Run everything up to the int_order_items_products model : dbt run -s +int_order_items_products
+10. We can reference the models by using "{{ ref('learning', 'stg_ecommerce_products', v='1') }}" or
+"{{ ref('learning', 'stg_ecommerce_products', v='2') }}"
+11. An alias can be added for a version instead by chaning the stg_ecommerce_products_v2 into stg_ecommerce_products then add an alias to the the version 2  then change the latest version to 2
+```
+config:
+   alias: stg_ecommerce_products
+
+```
