@@ -22,7 +22,7 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('stg_ecommerce__orders')
+              to: ref('stg_ecommerce_orders')
               field: order_id
 
       - name: user_id
@@ -35,7 +35,7 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('stg_ecommerce__products')
+              to: ref('stg_ecommerce_products')
               field: product_id
 
       - name: item_sale_price
