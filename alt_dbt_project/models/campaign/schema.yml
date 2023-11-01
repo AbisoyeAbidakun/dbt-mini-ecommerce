@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: daily_campaign
+    description: "Table for traffic campaign "
+    columns:
+      - name: traffic_cource
+        description: where traffic is coming from
+      - name: day
+        description: date of event
+
+  - name: monthly_campaign
+    description: "Table for traffic campaign "
+    columns:
+      - name: traffic_cource
+        description: where traffic is coming from
+      - name: month
+        description: date of event
+
+
